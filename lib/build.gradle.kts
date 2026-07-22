@@ -2,7 +2,7 @@ plugins {
     `java-library`
 }
 
-group = "io.github.melakudemeke"
+group = "io.github.henaorth16"
 version = "1.0.0-SNAPSHOT"
 
 repositories {
