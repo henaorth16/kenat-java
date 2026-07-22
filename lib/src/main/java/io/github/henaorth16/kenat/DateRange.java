@@ -13,9 +13,9 @@ import java.util.Objects;
  */
 public record DateRange(EthiopianDate start, EthiopianDate end) {
 
-    /** Compact constructor — null guard. */
+    /** Compact constructor — throws {@link IllegalArgumentException} on null. */
     public DateRange {
-        Objects.requireNonNull(start, "start must not be null");
-        Objects.requireNonNull(end,   "end must not be null");
+        if (start == null) throw new IllegalArgumentException("start must not be null");
+        if (end   == null) throw new IllegalArgumentException("end must not be null");
     }
 }

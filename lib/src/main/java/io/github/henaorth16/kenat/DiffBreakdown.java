@@ -6,15 +6,16 @@ import java.util.OptionalInt;
  * The result of decomposing a date difference into years, months, and/or days.
  *
  * <p>Maps to the TypeScript {@code DiffBreakdown} interface.  The optional
- * component fields are present only when the corresponding {@link DiffUnit}
- * was requested.
+ * component fields carry {@code null} when the corresponding {@link DiffUnit}
+ * was not requested; use {@link #yearsOpt()}, {@link #monthsOpt()}, and
+ * {@link #daysOpt()} for null-safe access.
  *
  * @param sign      Direction: {@code 1} if {@code from} is before {@code to},
  *                  {@code -1} otherwise
  * @param totalDays Absolute number of days between the two dates
- * @param years     Year component (null / absent when not requested)
- * @param months    Month component (null / absent when not requested)
- * @param days      Remaining day component (null / absent when not requested)
+ * @param years     Year component (null when DiffUnit.YEARS was not requested)
+ * @param months    Month component (null when DiffUnit.MONTHS was not requested)
+ * @param days      Remaining day component (null when DiffUnit.DAYS was not requested)
  */
 public record DiffBreakdown(
         int sign,
@@ -24,7 +25,7 @@ public record DiffBreakdown(
         Integer days
 ) {
 
-    /** Compact constructor — validates sign. */
+    /** Compact constructor — validates sign and totalDays. */
     public DiffBreakdown {
         if (sign != 1 && sign != -1) {
             throw new IllegalArgumentException("sign must be 1 or -1, got: " + sign);
