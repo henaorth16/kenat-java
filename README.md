@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/build-Gradle-green.svg)](lib/build.gradle.kts)
 
-A modern **Java 21** library for Ethiopian calendar (Ge'ez / Ethiopic) arithmetic, formatting, and holiday/fasting calculations.
+A modern **Java 21** library for Ethiopian calendar (Ge'ez / Ethiopic) arithmetic, formatting, holiday and fasting calculations.
 
 > This is an independent Java rewrite of the original [**Kenat**](https://github.com/MelakuDemeke/kenat) TypeScript library by [Melaku Demeke](https://github.com/MelakuDemeke), built from scratch using idiomatic Java — not a line-by-line translation.
 
@@ -12,16 +12,16 @@ A modern **Java 21** library for Ethiopian calendar (Ge'ez / Ethiopic) arithmeti
 
 ## Features
 
-- 🗓 **Ethiopian ↔ Gregorian conversion** — accurate multi-century date conversion
-- 📅 **Month grid generation** — calendar grid with weekday layout
-- 🕰 **Ethiopian time** — 12-hour Ethiopian clock ↔ standard time
-- 🔢 **Ge'ez numerals** — integers ↔ Ethiopic script numerals
+- 🗓 **Ethiopian ↔ Gregorian conversion** — accurate multi-century date math
+- 📅 **Month & year grid generation** — 7-column calendar grid with holidays and padding
+- 🕰 **Ethiopian time** — 12-hour Ethiopian clock ↔ 24h Gregorian; add/subtract/diff
+- 🔢 **Ge'ez numerals** — integers ↔ Ethiopic script (supports 0–99,999,999)
 - 📖 **Localized output** — Amharic and English month/weekday names
-- 🎉 **Holiday lookup** — full Ethiopian public holiday catalogue
-- 🙏 **Fasting periods** — Orthodox fasting calendar (Tsome Nebiyat, Hudade, etc.)
-- 📐 **Date arithmetic** — add/subtract days, months, years; diff between two dates
-- ✅ **Bahire Hasab** — moveable feast calculation (Enkutatash, Timkat, Easter, etc.)
-- 🧩 **Clean API** — Java records, sealed types, `java.time` integration, no nulls in public API
+- 🎉 **Holiday lookup** — fixed, movable Christian, and Islamic holidays
+- 🙏 **Fasting periods** — Abiy Tsome, Tsome Hawaryat, Nineveh, Tsome Nebiyat, Filseta, Ramadan, Tsome Dihenet
+- 📐 **Date arithmetic** — add/subtract days/months/years; full diff breakdown
+- ✅ **Bahire Hasab** — complete movable feast algorithm (Enkutatash, Timkat, Easter, Pentecost, etc.)
+- 🧩 **Clean API** — Java 21 records, `java.time` integration, immutable types, no external dependencies
 
 ---
 
@@ -29,7 +29,7 @@ A modern **Java 21** library for Ethiopian calendar (Ge'ez / Ethiopic) arithmeti
 
 ### Gradle (Kotlin DSL)
 
-Build locally first, then consume via `mavenLocal()`:
+Build locally and consume via `mavenLocal()`:
 
 ```bash
 git clone https://github.com/henaorth16/kenat-java.git
@@ -65,74 +65,209 @@ dependencies {
 ## Quick Start
 
 ```java
-import io.github.henaorth16.kenat.EthiopianDate;
-import io.github.henaorth16.kenat.GregorianDate;
+import io.github.henaorth16.kenat.*;
 
-// Create an Ethiopian date (year, month, day)
-EthiopianDate eth = new EthiopianDate(2016, 3, 15); // Hidar 15, 2016 EC
+// Today's Ethiopian date
+Kenat today = Kenat.now();
+System.out.println(today.format());                      // "ሐምሌ 15 2016"
+System.out.println(today.format("english"));             // "Hamle 15 2016"
+System.out.println(today.formatShort());                 // "2016/07/15"
+System.out.println(today.formatInGeezAmharic());         // "ሐምሌ ፲፭ ፳፻፲፮"
 
 // Convert Ethiopian → Gregorian
-GregorianDate greg = Conversions.toGregorian(eth);
-System.out.println(greg.toLocalDate()); // 2023-11-25
+EthiopianDate eth = new EthiopianDate(2016, 3, 15);      // Hidar 15, 2016 EC
+GregorianDate  greg = Conversions.toGC(eth);
+System.out.println(greg.toLocalDate());                  // 2023-11-25
 
 // Convert Gregorian → Ethiopian
-EthiopianDate back = Conversions.toEthiopian(GregorianDate.from(LocalDate.now()));
-System.out.println(back); // EthiopianDate[year=2016, month=3, day=15]
+EthiopianDate back = Conversions.toEC(LocalDate.of(2023, 11, 25));
+System.out.println(back);                                // 2016/03/15
+
+// Date arithmetic — immutable, chainable
+Kenat nextMonth = Kenat.now().add(1, "months");
+Kenat lastWeek  = Kenat.now().subtract(7, "days");
+
+// Diff
+Kenat a = new Kenat("2016/1/1");
+Kenat b = new Kenat("2017/3/15");
+System.out.println(a.diffInDays(b));   // -434
+System.out.println(a.diffInYears(b));  // -1
 ```
 
 ---
 
 ## API Overview
 
-### Core Types
+### `Kenat` — main facade
+
+```java
+// Constructors
+new Kenat()                              // today
+new Kenat("2016/1/1")                    // from Ethiopian date string (yyyy/mm/dd or yyyy-mm-dd)
+new Kenat(new EthiopianDate(2016, 1, 1)) // from record
+new Kenat(LocalDate.of(2023, 9, 12))     // from Gregorian LocalDate
+Kenat.now()                              // static factory
+
+// Getters
+k.getEthiopian()    // EthiopianDate
+k.getGregorian()    // GregorianDate
+k.getTime()         // EthiopianTime
+
+// Formatting
+k.format()                                        // "መስከረም 1 2016" (Amharic)
+k.format("english")                               // "Meskerem 1 2016"
+k.format("ethiopian","amharic", true, true, true) // weekday + Geez + time
+k.formatShort()                                   // "2016/01/01"
+k.formatInGeezAmharic()                           // "መስከረም ፩ ፳፻፲፮"
+k.formatWithWeekday("amharic", false)
+k.toISOString()                                   // "2016-01-01T12:00" (Ethiopian)
+k.toISOString("gregorian")                        // "2023-09-12T06:00" (true ISO 8601)
+k.toString()                                      // "መስከረም 1 2016 12:00 ጠዋት"
+
+// Arithmetic (all return new Kenat)
+k.add(3, "days")   .add(1, "months").add(2, "years")
+k.subtract(1, "months")
+k.addDays(n)  .addMonths(n)  .addYears(n)
+
+// Diff
+k.diffInDays(other)    // int
+k.diffInMonths(other)  // int
+k.diffInYears(other)   // int
+
+// Comparison
+k.isBefore(other)  .isAfter(other)
+k.isSameDay(other) .isSameMonth(other) .isSameYear(other)
+
+// Boundaries
+k.startOf("month")  .endOf("month")
+k.startOf("year")   .endOf("year")
+
+// Bahire Hasab
+BahireHasab.BahireHasabResult bh = k.getBahireHasab();
+bh.movableFeasts().get("fasika");    // Easter this year
+
+// Holiday check
+List<Holiday> holidays = k.isHoliday();  // empty if not a holiday
+
+// Calendar grids (static)
+Kenat.getMonthGrid(2016, 1)              // MonthGridResult
+Kenat.getYearCalendar(2016)              // List<MonthGridResult> (13 months)
+Kenat.generateDateRange(start, end)      // List<Kenat>
+```
+
+### Conversions
+
+```java
+GregorianDate g = Conversions.toGC(2016, 1, 1);
+EthiopianDate e = Conversions.toEC(2023, 9, 12);
+LocalDate     d = Conversions.toGCDate(2016, 1, 1);
+EthiopianDate e2 = Conversions.toEC(LocalDate.now());
+```
+
+### DayArithmetic
+
+```java
+EthiopianDate d  = new EthiopianDate(2016, 1, 1);
+EthiopianDate d2 = DayArithmetic.addDays(d, 45);
+EthiopianDate d3 = DayArithmetic.addMonths(d, 3);
+int days         = DayArithmetic.diffInDays(d, d2);
+DiffBreakdown br = DayArithmetic.diffBreakdown(d, d2, null); // all units
+br.yearsOpt();   // OptionalInt
+br.monthsOpt();
+br.daysOpt();
+```
+
+### GeezConverter
+
+```java
+String geez = GeezConverter.toGeez(2016);   // "፳፻፲፮"
+int    n    = GeezConverter.toArabic("፳፻"); // 2000
+```
+
+### EthiopianTime
+
+```java
+EthiopianTime t  = new EthiopianTime(6, 30, TimePeriod.DAY);
+EthiopianTime t2 = EthiopianTime.fromGregorian(12, 30);  // 12:30 Gregorian → 6:30 Ethiopian day
+EthiopianTime t3 = EthiopianTime.fromString("6:30 night");
+t.toGregorian();         // int[]{18, 30}
+t.add(2, 15);            // +2h15m → new EthiopianTime
+t.format();              // "፮:፴ ጠዋት"
+t.format("english", false, true, false);  // "06:30 day"
+```
+
+### Holidays
+
+```java
+Holiday h = Holidays.getHoliday("fasika", 2016);
+List<Holiday> month  = Holidays.getHolidaysInMonth(2016, 1, "amharic");
+List<Holiday> year   = Holidays.getHolidaysForYear(2016, "english");
+// Filter by tag
+List<Holiday> pub = Holidays.getHolidaysForYear(2016, "amharic",
+                        List.of(HolidayTags.PUBLIC));
+```
+
+### Fasting
+
+```java
+Optional<DateRange>          period = Fasting.getFastingPeriod(FastingKeys.ABIY_TSOME, 2016);
+Optional<Fasting.FastingInfoResult> info = Fasting.getFastingInfo(FastingKeys.RAMADAN, 2016, "english");
+List<Integer> days = Fasting.getFastingDays(FastingKeys.TSOME_DIHENET, 2016, 3);
+```
+
+### BahireHasab
+
+```java
+var bh = BahireHasab.getBahireHasab(2016);
+System.out.println(bh.ameteAlem());          // 7516
+System.out.println(bh.evangelistName());     // "ዮሐንስ"
+System.out.println(bh.ninevehDate());        // EthiopianDate
+bh.movableFeasts().forEach((key, h) ->
+    System.out.println(key + ": " + h.ethiopian()));
+```
+
+### MonthGrid
+
+```java
+var config = new MonthGrid.MonthGridConfig(2016, 1, 1, false, "amharic", null, "public", false);
+MonthGrid.MonthGridResult grid = MonthGrid.create(config);
+grid.headers();     // ["ሰኞ", "ማክሰኞ", ...]
+grid.days();        // List<MonthGridDay | null> — null = padding
+grid.monthName();   // "መስከረም"
+```
+
+---
+
+## Core Types
 
 | Type | Description |
 |------|-------------|
 | `EthiopianDate` | Immutable record — Ethiopian year, month (1–13), day |
-| `GregorianDate` | Immutable record — Gregorian year/month/day with `toLocalDate()` helper |
-| `LocalizedText` | Holds Amharic + English text (+ optional extras map) |
-| `Language` | Enum — `AMHARIC`, `ENGLISH`, with `fromString()` / `key()` |
-| `TimePeriod` | Enum — `DAY`, `NIGHT` |
-| `Holiday` | Record — name (`LocalizedText`), date, and tags |
-| `DateRange` | Inclusive Ethiopian date range with start/end |
-| `DiffBreakdown` | Date diff result — years/months/days as `OptionalInt` |
-| `DiffUnit` | Enum — `YEARS`, `MONTHS`, `DAYS` |
+| `GregorianDate` | Immutable record — Gregorian year/month/day with `toLocalDate()` |
+| `EthiopianTime` | Mutable value — hour 1–12, minute, `TimePeriod` |
+| `LocalizedText` | Amharic + English + optional extras map |
+| `Holiday` | Key, tags, movable flag, name, description, Ethiopian + Gregorian dates |
+| `DateRange` | Inclusive Ethiopian date range (start, end) |
+| `DiffBreakdown` | sign, totalDays, optional years/months/days |
+| `Language` | Enum: `AMHARIC`, `ENGLISH` |
+| `TimePeriod` | Enum: `DAY`, `NIGHT` |
+| `DiffUnit` | Enum: `YEARS`, `MONTHS`, `DAYS` |
 
-### Exceptions
+## Exceptions
 
-All exceptions extend `KenatException` (unchecked `RuntimeException`):
+All extend `KenatException` (unchecked):
 
 | Exception | When thrown |
 |-----------|-------------|
-| `InvalidEthiopianDateException` | Out-of-range Ethiopian date values |
-| `InvalidGregorianDateException` | Out-of-range Gregorian date values |
-| `InvalidDateFormatException` | Unparseable date string |
+| `InvalidEthiopianDateException` | Out-of-range Ethiopian date |
+| `InvalidGregorianDateException` | Out-of-range Gregorian date |
+| `InvalidDateFormatException` | Malformed date string |
 | `UnrecognizedInputException` | Unknown enum key or identifier |
 | `GeezConverterException` | Invalid Ge'ez numeral input |
 | `InvalidInputTypeException` | Wrong argument type |
-| `InvalidTimeException` | Invalid Ethiopian time value |
+| `InvalidTimeException` | Invalid Ethiopian time values |
 | `InvalidGridConfigException` | Bad month-grid configuration |
-| `UnknownHolidayException` | Unrecognized holiday key |
-
-### Constants
-
-```java
-import io.github.henaorth16.kenat.KenatConstants;
-import io.github.henaorth16.kenat.LocalizedText;
-
-// Ethiopian month names (1-indexed)
-LocalizedText meskerem = KenatConstants.MONTH_NAMES.get(1);
-System.out.println(meskerem.amharic()); // "መስከረም"
-System.out.println(meskerem.english()); // "Meskerem"
-
-// Weekday names (0 = Sunday)
-LocalizedText sunday = KenatConstants.WEEKDAY_NAMES.get(0);
-
-// Full holiday catalogue
-KenatConstants.HOLIDAYS.forEach((key, holiday) ->
-    System.out.println(key + " → " + holiday.name().english())
-);
-```
+| `UnknownHolidayException` | Unrecognised holiday key |
 
 ---
 
@@ -143,34 +278,39 @@ kenat-java/
 ├── lib/
 │   └── src/
 │       ├── main/java/io/github/henaorth16/kenat/
+│       │   ├── Kenat.java                   ← main facade
+│       │   ├── Conversions.java
+│       │   ├── DayArithmetic.java
+│       │   ├── EthiopianCalendarUtils.java
+│       │   ├── GeezConverter.java
+│       │   ├── EthiopianTime.java
+│       │   ├── Formatting.java
+│       │   ├── BahireHasab.java
+│       │   ├── Holidays.java
+│       │   ├── Fasting.java
+│       │   ├── MonthGrid.java
 │       │   ├── EthiopianDate.java
 │       │   ├── GregorianDate.java
 │       │   ├── LocalizedText.java
+│       │   ├── Holiday.java
+│       │   ├── DateRange.java
+│       │   ├── DiffBreakdown.java
+│       │   ├── DiffUnit.java
 │       │   ├── Language.java
 │       │   ├── TimePeriod.java
-│       │   ├── Holiday.java
 │       │   ├── HolidayTags.java
 │       │   ├── FastingKeys.java
-│       │   ├── DateRange.java
-│       │   ├── DiffUnit.java
-│       │   ├── DiffBreakdown.java
 │       │   ├── KenatConstants.java
-│       │   └── exception/
-│       │       ├── KenatException.java
-│       │       ├── InvalidEthiopianDateException.java
-│       │       ├── InvalidGregorianDateException.java
-│       │       ├── InvalidDateFormatException.java
-│       │       ├── UnrecognizedInputException.java
-│       │       ├── GeezConverterException.java
-│       │       ├── InvalidInputTypeException.java
-│       │       ├── InvalidTimeException.java
-│       │       ├── InvalidGridConfigException.java
-│       │       └── UnknownHolidayException.java
+│       │   └── exception/           ← 10 typed exception classes
 │       └── test/java/io/github/henaorth16/kenat/
-│           ├── TypesAndExceptionsTest.java
+│           ├── TypesAndExceptionsTest.java  (92 tests ✅)
 │           └── ConstantsTest.java
-├── docs/                  # Architecture, migration notes, dependency graphs
-├── gradle/                # Gradle wrapper
+├── docs/
+│   ├── AGENT_CONTEXT.md
+│   ├── MIGRATION.md
+│   ├── ARCHITECTURE.md
+│   └── ...
+├── gradle/
 ├── lib/build.gradle.kts
 ├── settings.gradle.kts
 ├── AGENTS.md
@@ -184,32 +324,25 @@ kenat-java/
 ### Prerequisites
 
 - Java 21+
-- No Gradle install needed — the wrapper (`./gradlew`) handles everything
+- No Gradle install needed — `./gradlew` handles everything
 
 ### Build & Test
 
 ```bash
-# Run all tests
-./gradlew test
-
-# Compile only
-./gradlew compileJava
-
-# Generate Javadoc
-./gradlew javadoc
-
-# Publish to local Maven repo
-./gradlew publishToMavenLocal
+./gradlew test                  # run all JUnit 5 tests
+./gradlew compileJava           # compile only
+./gradlew javadoc               # generate Javadoc
+./gradlew publishToMavenLocal   # install to local Maven repo
 ```
 
 ### Contributing
 
-1. Fork the repo and create a feature branch off `main`.
-2. All code goes under `io.github.henaorth16.kenat` — keep the package structure consistent.
-3. Write JUnit 5 tests for every new class. Mirror the original TypeScript test cases where applicable.
-4. Keep types immutable — prefer Java records over mutable classes.
-5. Use `java.time` types in public APIs.
-6. Update `docs/MIGRATION.md` after each module is completed.
+1. Fork and create a feature branch off `main`.
+2. All code goes under `io.github.henaorth16.kenat`.
+3. Write JUnit 5 tests for every new class — mirror the TypeScript test fixtures.
+4. Keep types immutable (prefer Java records).
+5. Use `java.time` in public APIs; no external dependencies.
+6. Update `docs/MIGRATION.md` status after each module.
 7. Open a PR with a clear description of what changed and why.
 
 ---

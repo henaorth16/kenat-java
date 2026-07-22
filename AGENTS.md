@@ -28,8 +28,8 @@ kenat_java/
 │   └── MIGRATION.md    ← module map, API map, progress checklist
 ├── lib/
 │   └── src/
-│       ├── main/java/io/github/melakudemeke/kenat/   ← library (target)
-│       └── test/java/io/github/melakudemeke/kenat/   ← tests (mirror ../kenat/tests)
+│       ├── main/java/io/github/henaorth16/kenat/   ← library
+│       └── test/java/io/github/henaorth16/kenat/   ← tests (mirror ../kenat/tests)
 ├── settings.gradle.kts
 └── gradle/
 ```
@@ -150,28 +150,28 @@ Types: see `docs/MIGRATION.md` for the full type mapping.
 
 ## Migration status
 
-**Phase:** Bootstrap (Gradle scaffold only; no Kenat implementation yet)
+**Phase: COMPLETE — all core modules implemented, all tests passing (92/92).**
 
 | Module | Status | Notes |
 |--------|--------|-------|
-| Gradle / Java 21 | Done | `settings.gradle.kts` fixed; placeholder `Library` still present |
-| Package structure | Not started | Replace `org.example` with `io.github.henaorth16.kenat` |
-| constants | Not started | |
-| utils | Not started | |
-| conversions | Not started | Start here—foundation for everything else |
-| dayArithmetic | Not started | |
-| errors | Not started | |
-| bahireHasab | Not started | |
-| holidays | Not started | |
-| fasting | Not started | |
-| formatting | Not started | |
-| geezConverter | Not started | |
-| Time | Not started | |
-| MonthGrid + nigs | Not started | |
-| Kenat | Not started | |
-| Tests ported | Not started | |
-
-Update this table after every task.
+| Gradle / Java 21 | ✅ Done | |
+| Package structure | ✅ Done | `io.github.henaorth16.kenat` |
+| errors | ✅ Done | 10 typed exception classes |
+| types | ✅ Done | Records + enums |
+| constants | ✅ Done | `KenatConstants`, `HolidayTags`, `FastingKeys` |
+| utils | ✅ Done | `EthiopianCalendarUtils` |
+| conversions | ✅ Done | `Conversions` |
+| dayArithmetic | ✅ Done | `DayArithmetic` |
+| geezConverter | ✅ Done | `GeezConverter` |
+| formatting | ✅ Done | `Formatting` |
+| bahireHasab | ✅ Done | `BahireHasab` |
+| holidays | ✅ Done | `Holidays` (includes Islamic via arithmetic Hijri) |
+| fasting | ✅ Done | `Fasting` |
+| Time | ✅ Done | `EthiopianTime` |
+| MonthGrid | ✅ Done | `MonthGrid` (saints/nigs overlay deferred) |
+| Kenat facade | ✅ Done | `Kenat` |
+| Tests ported | ☐ Pending | TypeScript fixtures not yet ported to JUnit |
+| nigs.json resource | ☐ Pending | Copy to `src/main/resources/kenat/nigs.json` |
 
 ## Suggested implementation order
 
