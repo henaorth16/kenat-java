@@ -34,7 +34,7 @@ kenat_java/
 └── gradle/
 ```
 
-**Target package:** `io.github.melakudemeke.kenat`
+**Target package:** `io.github.henaorth16.kenat`
 
 Gradle multi-project: single module `lib` (may split later if size warrants).
 
@@ -155,7 +155,7 @@ Types: see `docs/MIGRATION.md` for the full type mapping.
 | Module | Status | Notes |
 |--------|--------|-------|
 | Gradle / Java 21 | Done | `settings.gradle.kts` fixed; placeholder `Library` still present |
-| Package structure | Not started | Replace `org.example` with `io.github.melakudemeke.kenat` |
+| Package structure | Not started | Replace `org.example` with `io.github.henaorth16.kenat` |
 | constants | Not started | |
 | utils | Not started | |
 | conversions | Not started | Start here—foundation for everything else |
@@ -190,7 +190,7 @@ Update this table after every task.
 
 ## Publishing (future)
 
-Group ID: `io.github.melakudemeke`. Maven Central publishing (Dokka, signing) deferred until API stabilizes. A draft publishing block was previously misplaced in `settings.gradle.kts`—belongs in `lib/build.gradle.kts` when ready.
+Group ID: `io.github.henaorth16`. Maven Central publishing (Dokka, signing) deferred until API stabilizes. A draft publishing block was previously misplaced in `settings.gradle.kts`—belongs in `lib/build.gradle.kts` when ready.
 
 ## Related files
 
