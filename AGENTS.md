@@ -190,7 +190,18 @@ Types: see `docs/MIGRATION.md` for the full type mapping.
 
 ## Publishing (future)
 
-Group ID: `io.github.henaorth16`. Maven Central publishing (Dokka, signing) deferred until API stabilizes. A draft publishing block was previously misplaced in `settings.gradle.kts`—belongs in `lib/build.gradle.kts` when ready.
+Group ID: `io.github.henaorth16`. Maven Central publishing configured and ready.
+
+**Setup complete:**
+- `lib/build.gradle.kts` uses Gradle built-in `maven-publish` + `signing` plugins (no third-party plugin required).
+- Artifact coordinates: `io.github.henaorth16:kenat:1.0.0`
+- Full POM metadata: name, description, URL, MIT license, developer, SCM.
+- GPG signing is conditional — only activates when `signing.keyId` or `signing.key` property is present.
+- Upload target: Sonatype Central Portal staging API (`central.sonatype.com`).
+
+**Credentials template:** see `gradle.properties` in the project root (all lines commented out — never committed with real values). Copy real values to `~/.gradle/gradle.properties`.
+
+**To publish a release:** see "What to do next" in `docs/MIGRATION.md`.
 
 ## Related files
 
