@@ -45,22 +45,6 @@ tasks.withType<Javadoc>().configureEach {
 }
 
 // ─── Publishing ──────────────────────────────────────────────────────────────
-// Targets: Maven Central via the Sonatype Central Portal.
-//
-// Required properties (put in ~/.gradle/gradle.properties, NOT committed):
-//   mavenCentralUsername   = <portal token username>
-//   mavenCentralPassword   = <portal token password>
-//   signing.keyId          = <last 8 hex chars of GPG key>
-//   signing.password       = <GPG passphrase>
-//   signing.secretKeyRingFile = /home/<you>/.gnupg/secring.gpg
-//
-// Or use in-memory signing (good for CI):
-//   signing.key            = <full armored PGP private key block>
-//   signing.password       = <GPG passphrase>
-//
-// Publish a release:
-//   ./gradlew publishToSonatype         # upload → manual "Publish" on portal
-// ─────────────────────────────────────────────────────────────────────────────
 
 publishing {
     publications {
@@ -101,9 +85,6 @@ publishing {
     }
 
     repositories {
-        // Sonatype Central Portal staging endpoint (used by the Portal OSSRH Staging API).
-        // After upload, log in to https://central.sonatype.com/publishing/deployments and
-        // click "Publish" to release to Maven Central.
         maven {
             name = "SonatypeCentralPortal"
             url  = uri("https://central.sonatype.com/api/v1/publisher/upload")
@@ -112,7 +93,6 @@ publishing {
                 password = findProperty("mavenCentralPassword") as String? ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
             }
         }
-        // Convenience: local Maven cache for smoke-testing before uploading
         maven {
             name = "local"
             url  = uri(layout.buildDirectory.dir("local-repo"))
@@ -120,24 +100,29 @@ publishing {
     }
 }
 
-// ─── GPG signing (required by Maven Central) ─────────────────────────────────
-// Credentials in ~/.gradle/gradle.properties:
-//   signing.keyId=5E6B2388
-//   signing.password=<passphrase>
-//   signing.secretKeyRingFile=/home/hena/.gnupg/secring.gpg
+// ─── GPG signing ─────────────────────────────────────────────────────────────
+// The key file path is read from signing.keyFile in ~/.gradle/gradle.properties.
+// This avoids the backslash-continuation problem entirely — the key lives in a
+// plain .asc file, not crammed into a .properties value.
 //
-// For CI, use in-memory signing instead:
-//   signing.key=<full armored PGP PRIVATE KEY BLOCK>
-//   signing.password=<passphrase>
+// ~/.gradle/gradle.properties should contain:
+//   signing.keyFile=/home/hena/.gnupg/kenat_signing_key.asc
+//   signing.password=yourPassphrase
+//   mavenCentralUsername=yourPortalTokenUsername
+//   mavenCentralPassword=yourPortalTokenPassword
 // ─────────────────────────────────────────────────────────────────────────────
 signing {
-    val signingKey: String? = findProperty("signing.key") as String?
-    if (signingKey != null) {
-        // In-memory key (CI-friendly)
-        val signingPassword = findProperty("signing.password") as String? ?: ""
-        useInMemoryPgpKeys(signingKey, signingPassword)
+    val keyFile = findProperty("signing.keyFile") as String?
+    val keyPassword = findProperty("signing.password") as String? ?: ""
+
+    if (keyFile != null) {
+        val keyContent = file(keyFile).readText()
+        useInMemoryPgpKeys(keyContent, keyPassword)
     }
-    // If signing.key is absent, falls back to signing.keyId +
-    // signing.secretKeyRingFile from gradle.properties automatically.
+
     sign(publishing.publications["mavenJava"])
+}
+
+tasks.withType<Sign>().configureEach {
+    onlyIf { findProperty("signing.keyFile") != null }
 }
