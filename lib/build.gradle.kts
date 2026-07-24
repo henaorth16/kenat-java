@@ -121,8 +121,15 @@ publishing {
 }
 
 // ─── GPG signing (required by Maven Central) ─────────────────────────────────
-// Signing is activated when the signing.keyId property is present.
-// This means local dev builds without signing config are unaffected.
+// Credentials in ~/.gradle/gradle.properties:
+//   signing.keyId=5E6B2388
+//   signing.password=<passphrase>
+//   signing.secretKeyRingFile=/home/hena/.gnupg/secring.gpg
+//
+// For CI, use in-memory signing instead:
+//   signing.key=<full armored PGP PRIVATE KEY BLOCK>
+//   signing.password=<passphrase>
+// ─────────────────────────────────────────────────────────────────────────────
 signing {
     val signingKey: String? = findProperty("signing.key") as String?
     if (signingKey != null) {
@@ -130,14 +137,7 @@ signing {
         val signingPassword = findProperty("signing.password") as String? ?: ""
         useInMemoryPgpKeys(signingKey, signingPassword)
     }
-    // If signing.key is absent, the plugin falls back to signing.keyId +
+    // If signing.key is absent, falls back to signing.keyId +
     // signing.secretKeyRingFile from gradle.properties automatically.
     sign(publishing.publications["mavenJava"])
-}
-
-// Skip signing when the key is not configured (local dev / snapshot builds)
-tasks.withType<Sign>().configureEach {
-    onlyIf {
-        findProperty("signing.keyId") != null || findProperty("signing.key") != null
-    }
 }
