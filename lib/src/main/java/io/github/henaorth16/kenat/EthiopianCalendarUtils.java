@@ -104,15 +104,26 @@ public final class EthiopianCalendarUtils {
     // -----------------------------------------------------------------------
 
     /**
-     * Returns the Gregorian date of the Ethiopian New Year that falls within the
-     * given Gregorian year.
+     * Returns the Gregorian date of the Ethiopian New Year (Enkutatash) that
+     * falls within the given Gregorian year.
+     *
+     * <p>Enkutatash lands on 11 September, except in the year preceding a
+     * Gregorian leap year, when it lands on 12 September.
+     *
+     * <p><strong>Deviation from the TypeScript library:</strong>
+     * {@code getEthiopianNewYearForGregorian} in {@code utils.ts} tests the
+     * <em>preceding</em> Gregorian year ({@code gYear - 1}) instead of the
+     * following one, which returns the wrong day for roughly half of all years
+     * (e.g. it gives 11 September 2023 where the correct answer, and the one
+     * {@link #getGregorianDateOfEthiopianNewYear} produces, is 12 September).
+     * The function is unused inside the TypeScript library, so the bug is not
+     * observable there; here it is corrected so the two helpers agree.
      *
      * @param gYear Gregorian year
      * @return {@code int[3]}: {@code [gregorianYear, month, day]}
      */
     public static int[] getEthiopianNewYearForGregorian(int gYear) {
-        int prevGYear = gYear - 1;
-        int newYearDay = isGregorianLeapYear(prevGYear) ? 12 : 11;
+        int newYearDay = isGregorianLeapYear(gYear + 1) ? 12 : 11;
         return new int[]{gYear, 9, newYearDay};
     }
 
