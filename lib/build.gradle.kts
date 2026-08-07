@@ -1,3 +1,5 @@
+import org.gradle.plugins.signing.Sign
+
 plugins {
     `java-library`
     `maven-publish`
@@ -41,6 +43,15 @@ tasks.withType<Javadoc>().configureEach {
     (options as StandardJavadocDocletOptions).apply {
         addStringOption("Xdoclint:none", "-quiet")
         source = "21"
+    }
+}
+tasks.register("checkSigningKey") {
+    doLast {
+        val key = findProperty("signing.key") as String?
+        println("Key exists: ${key != null}")
+        println("Key length: ${key?.length}")
+        println("Starts with: ${key?.take(35)}")
+        println("Ends with: ${key?.takeLast(35)}")
     }
 }
 
@@ -87,7 +98,7 @@ publishing {
     repositories {
         maven {
             name = "SonatypeCentralPortal"
-            url  = uri("https://central.sonatype.com/api/v1/publisher/upload")
+            url  = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
             credentials {
                 username = findProperty("mavenCentralUsername") as String? ?: System.getenv("MAVEN_CENTRAL_USERNAME")
                 password = findProperty("mavenCentralPassword") as String? ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
@@ -100,29 +111,17 @@ publishing {
     }
 }
 
-// ─── GPG signing ─────────────────────────────────────────────────────────────
-// The key file path is read from signing.keyFile in ~/.gradle/gradle.properties.
-// This avoids the backslash-continuation problem entirely — the key lives in a
-// plain .asc file, not crammed into a .properties value.
-//
-// ~/.gradle/gradle.properties should contain:
-//   signing.keyFile=/home/hena/.gnupg/kenat_signing_key.asc
-//   signing.password=yourPassphrase
-//   mavenCentralUsername=yourPortalTokenUsername
-//   mavenCentralPassword=yourPortalTokenPassword
-// ─────────────────────────────────────────────────────────────────────────────
 signing {
-    val keyFile = findProperty("signing.keyFile") as String?
-    val keyPassword = findProperty("signing.password") as String? ?: ""
+    val signingPassword = findProperty("signing.password") as String?
 
-    if (keyFile != null) {
-        val keyContent = file(keyFile).readText()
-        useInMemoryPgpKeys(keyContent, keyPassword)
+    val signingKey = findProperty("signing.key") as String?
+    val signingKeyFile = findProperty("signing.keyFile") as String?
+
+    if (signingKey != null) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else if (signingKeyFile != null) {
+        useInMemoryPgpKeys(File(signingKeyFile).readText(), signingPassword)
     }
 
-    sign(publishing.publications["mavenJava"])
-}
-
-tasks.withType<Sign>().configureEach {
-    onlyIf { findProperty("signing.keyFile") != null }
+    sign(publishing.publications)
 }

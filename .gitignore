@@ -12,3 +12,5 @@ docs
 
 # Local overrides — may contain signing keys / Maven Central credentials
 local.properties
+gradle.properties
+*.properties

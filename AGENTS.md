@@ -188,20 +188,25 @@ Types: see `docs/MIGRATION.md` for the full type mapping.
 11. `MonthGrid` (+ resource copy of `nigs.json`)  
 12. `Kenat` façade + integration tests  
 
-## Publishing (future)
+## Publishing
 
-Group ID: `io.github.henaorth16`. Maven Central publishing configured and ready.
+Group ID: `io.github.henaorth16`. Published `kenat:1.0.0` to Maven Central (2026-08-08).
 
 **Setup complete:**
 - `lib/build.gradle.kts` uses Gradle built-in `maven-publish` + `signing` plugins (no third-party plugin required).
 - Artifact coordinates: `io.github.henaorth16:kenat:1.0.0`
 - Full POM metadata: name, description, URL, MIT license, developer, SCM.
-- GPG signing is conditional — only activates when `signing.keyId` or `signing.key` property is present.
-- Upload target: Sonatype Central Portal staging API (`central.sonatype.com`).
+- Upload target: **OSSRH Staging API** (`ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/`) — the Central Portal does not accept Maven PUT directly; the staging API is Sonatype's compatibility service.
+- GPG signing reads the private key from `signing.keyFile` (`.asc` file) or `signing.key` (in-memory); passphrase in `signing.password`.
 
 **Credentials template:** see `gradle.properties` in the project root (all lines commented out — never committed with real values). Copy real values to `~/.gradle/gradle.properties`.
 
-**To publish a release:** see "What to do next" in `docs/MIGRATION.md`.
+**To publish a release:** see "Publishing to Maven Central (working procedure)" in `docs/MIGRATION.md`. Key steps:
+1. `./gradlew :lib:publishMavenJavaPublicationToSonatypeCentralPortalRepository`
+2. `curl -X POST -H "Authorization: Bearer $TOKEN" "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.henaorth16?publishing_type=automatic"`
+3. Poll `https://central.sonatype.com/api/v1/publisher/status?id=<deploymentId>` until `PUBLISHED`.
+
+Prerequisite: the GPG **public** key must be on a supported keyserver (`gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>`).
 
 ## Related files
 
