@@ -27,26 +27,25 @@ A modern **Java 21** library for Ethiopian calendar (Ge'ez / Ethiopic) arithmeti
 
 ## Installation
 
+Available on [Maven Central](https://central.sonatype.com/artifact/io.github.henaorth16/kenat) as `io.github.henaorth16:kenat:1.0.0`. Requires **Java 21+**.
+
 ### Gradle (Kotlin DSL)
-
-Build locally and consume via `mavenLocal()`:
-
-```bash
-git clone https://github.com/henaorth16/kenat-java.git
-cd kenat-java
-./gradlew publishToMavenLocal
-```
-
-Then in your project's `build.gradle.kts`:
 
 ```kotlin
 repositories {
-    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    implementation("io.github.henaorth16:kenat:1.0.0-SNAPSHOT")
+    implementation("io.github.henaorth16:kenat:1.0.0")
+}
+```
+
+### Gradle (Groovy DSL)
+
+```groovy
+dependencies {
+    implementation 'io.github.henaorth16:kenat:1.0.0'
 }
 ```
 
@@ -56,9 +55,21 @@ dependencies {
 <dependency>
     <groupId>io.github.henaorth16</groupId>
     <artifactId>kenat</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
+
+### Local development
+
+To build and install the current source into your local Maven repository:
+
+```bash
+git clone https://github.com/henaorth16/kenat-java.git
+cd kenat-java
+./gradlew publishToMavenLocal
+```
+
+Then add `mavenLocal()` to your `repositories` block (before `mavenCentral()`).
 
 ---
 
