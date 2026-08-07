@@ -2,6 +2,7 @@ package io.github.henaorth16.kenat;
 
 import io.github.henaorth16.kenat.exception.InvalidDateFormatException;
 import io.github.henaorth16.kenat.exception.InvalidEthiopianDateException;
+import io.github.henaorth16.kenat.exception.UnknownHolidayException;
 import io.github.henaorth16.kenat.exception.UnrecognizedInputException;
 
 import java.time.LocalDate;
@@ -104,6 +105,28 @@ public final class Kenat {
         return new Kenat();
     }
 
+    /**
+     * Coerces a loosely-typed date input into a {@code Kenat}.
+     * Mirrors {@code Kenat._coerceToKenat} in {@code Kenat.ts}, which accepts a
+     * {@code Kenat}, an Ethiopian date object, a {@code 'yyyy/mm/dd'} string, or
+     * a native {@code Date}.
+     *
+     * @param input a {@code Kenat}, {@link EthiopianDate}, {@link GregorianDate},
+     *              {@link LocalDate}, or Ethiopian date {@link String}
+     * @return the equivalent {@code Kenat}
+     * @throws UnrecognizedInputException if the input is null or of an unsupported type
+     */
+    public static Kenat of(Object input) {
+        return switch (input) {
+            case Kenat k          -> k;
+            case EthiopianDate d  -> new Kenat(d);
+            case LocalDate d      -> new Kenat(d);
+            case GregorianDate d  -> new Kenat(d.toLocalDate());
+            case String s         -> new Kenat(s);
+            case null, default    -> throw UnrecognizedInputException.forInput(input);
+        };
+    }
+
     // -----------------------------------------------------------------------
     // Getters
     // -----------------------------------------------------------------------
@@ -121,6 +144,17 @@ public final class Kenat {
     /** Returns the time component. */
     public EthiopianTime getTime() {
         return time;
+    }
+
+    /**
+     * Returns the current wall-clock time as an Ethiopian time, independent of
+     * this instance's own time component.
+     *
+     * @return the system clock converted to the Ethiopian 12-hour clock
+     */
+    public EthiopianTime getCurrentTime() {
+        LocalTime now = LocalTime.now();
+        return EthiopianTime.fromGregorian(now.getHour(), now.getMinute());
     }
 
     /**
@@ -301,9 +335,41 @@ public final class Kenat {
         return buildMonthCalendar(ethiopian.year(), ethiopian.month(), useGeez);
     }
 
+    /** Generates the calendar for this instance's month, in Arabic numerals. */
+    public List<CalendarDay> getMonthCalendar() {
+        return getMonthCalendar(false);
+    }
+
+    /**
+     * Generates the calendar for an arbitrary Ethiopian month.
+     *
+     * @param year    Ethiopian year
+     * @param month   Ethiopian month (1–13)
+     * @param useGeez display in Ge'ez numerals
+     * @return list of day entries
+     */
+    public List<CalendarDay> getMonthCalendar(int year, int month, boolean useGeez) {
+        return buildMonthCalendar(year, month, useGeez);
+    }
+
     /** Generates calendar for an arbitrary Ethiopian month. */
     public static List<CalendarDay> getMonthCalendarStatic(int year, int month, boolean useGeez) {
         return buildMonthCalendar(year, month, useGeez);
+    }
+
+    /**
+     * Prints this instance's month as a text grid to {@link System#out}.
+     *
+     * @param useGeez display the year and day numbers in Ge'ez numerals
+     */
+    public void printThisMonth(boolean useGeez) {
+        MonthCalendarPrinter.print(ethiopian.year(), ethiopian.month(),
+                getMonthCalendar(useGeez), useGeez);
+    }
+
+    /** Prints this instance's month as a text grid, in Arabic numerals. */
+    public void printThisMonth() {
+        printThisMonth(false);
     }
 
     /**
@@ -334,14 +400,12 @@ public final class Kenat {
      */
     public static List<MonthGrid.MonthGridResult> getYearCalendar(int year,
                                                                     MonthGrid.MonthGridConfig config) {
+        MonthGrid.MonthGridConfig base = (config != null)
+                ? config
+                : new MonthGrid.MonthGridConfig(year, 1);
         List<MonthGrid.MonthGridResult> fullYear = new ArrayList<>(13);
         for (int m = 1; m <= 13; m++) {
-            MonthGrid.MonthGridConfig mc = (config != null)
-                    ? new MonthGrid.MonthGridConfig(year, m, config.weekStart(),
-                            config.useGeez(), config.weekdayLang(),
-                            config.holidayFilter(), config.mode(), config.showAllSaints())
-                    : new MonthGrid.MonthGridConfig(year, m);
-            fullYear.add(MonthGrid.create(mc));
+            fullYear.add(MonthGrid.create(base.withYearMonth(year, m)));
         }
         return fullYear;
     }
@@ -501,6 +565,216 @@ public final class Kenat {
             }
             default -> throw new IllegalArgumentException("Invalid unit: " + unit);
         };
+    }
+
+    /** Returns a new {@code Kenat} set to the first day of this month. */
+    public Kenat startOfMonth() {
+        return startOf("month");
+    }
+
+    /** Returns a new {@code Kenat} set to the last day of this month. */
+    public Kenat endOfMonth() {
+        return endOf("month");
+    }
+
+    // -----------------------------------------------------------------------
+    // Calendar queries
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns {@code true} if this instance's Ethiopian year is a leap year
+     * (Pagume has 6 days).
+     */
+    public boolean isLeapYear() {
+        return EthiopianCalendarUtils.isEthiopianLeapYear(ethiopian.year());
+    }
+
+    /**
+     * Returns the day of the week for this date.
+     *
+     * @return 0 for Sunday through 6 for Saturday
+     */
+    public int weekday() {
+        return EthiopianCalendarUtils.getWeekday(ethiopian);
+    }
+
+    // -----------------------------------------------------------------------
+    // Distance helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Which occurrence of a recurring holiday {@link #distanceToHoliday} should
+     * measure against.
+     */
+    public enum HolidayDirection {
+        /** Whichever of the previous/next occurrence is closer to today. */
+        AUTO,
+        /** The next occurrence on or after today. */
+        FUTURE,
+        /** The most recent occurrence on or before today. */
+        PAST
+    }
+
+    /**
+     * Returns the distance from this date to another, broken down into the
+     * requested units.
+     *
+     * <p>The breakdown's {@code sign} is {@code 1} when {@code other} is on or
+     * after this date and {@code -1} when it is before.
+     *
+     * @param other target date
+     * @param units units to include; {@code null} for years, months and days
+     * @return the breakdown
+     */
+    public DiffBreakdown distanceTo(Kenat other, Set<DiffUnit> units) {
+        Objects.requireNonNull(other, "other must not be null");
+        return DayArithmetic.diffBreakdown(other.getEthiopian(), ethiopian, units);
+    }
+
+    /** Returns the distance from this date to another, in years, months and days. */
+    public DiffBreakdown distanceTo(Kenat other) {
+        return distanceTo(other, null);
+    }
+
+    /**
+     * Returns the distance from this date to a loosely-typed target.
+     *
+     * @param other a {@code Kenat}, {@link EthiopianDate}, {@link LocalDate}, or
+     *              Ethiopian date {@link String}
+     * @param units units to include; {@code null} for all three
+     * @return the breakdown
+     */
+    public DiffBreakdown distanceTo(Object other, Set<DiffUnit> units) {
+        return distanceTo(Kenat.of(other), units);
+    }
+
+    /**
+     * Returns the distance from today to this date.
+     *
+     * @param units units to include; {@code null} for all three
+     * @return the breakdown
+     */
+    public DiffBreakdown distanceFromToday(Set<DiffUnit> units) {
+        return Kenat.now().distanceTo(this, units);
+    }
+
+    /** Returns the distance from today to this date, in years, months and days. */
+    public DiffBreakdown distanceFromToday() {
+        return distanceFromToday(null);
+    }
+
+    /**
+     * Returns the distance from today to an occurrence of the given holiday.
+     *
+     * @param holidayKey camelCase holiday key, e.g. {@code "fasika"}
+     * @param direction  which occurrence to measure against
+     * @param units      units to include; {@code null} for all three
+     * @return the breakdown
+     * @throws UnknownHolidayException if the key resolves to no occurrence at all
+     */
+    public static DiffBreakdown distanceToHoliday(String holidayKey,
+                                                   HolidayDirection direction,
+                                                   Set<DiffUnit> units) {
+        Kenat today = Kenat.now();
+        EthiopianDate ref = today.getEthiopian();
+        Kenat next = holidayOccurrence(holidayKey, ref, true);
+        Kenat prev = holidayOccurrence(holidayKey, ref, false);
+
+        HolidayDirection dir = direction == null ? HolidayDirection.AUTO : direction;
+        Kenat target = switch (dir) {
+            case PAST   -> prev;
+            case FUTURE -> next;
+            case AUTO   -> {
+                int dNext = Math.abs(DayArithmetic.diffInDays(next.getEthiopian(), ref));
+                int dPrev = Math.abs(DayArithmetic.diffInDays(prev.getEthiopian(), ref));
+                yield dNext <= dPrev ? next : prev;
+            }
+        };
+        return today.distanceTo(target, units);
+    }
+
+    /** Returns the distance from today to the nearest occurrence of the holiday. */
+    public static DiffBreakdown distanceToHoliday(String holidayKey) {
+        return distanceToHoliday(holidayKey, HolidayDirection.AUTO, null);
+    }
+
+    /**
+     * Renders a breakdown as a human-readable string, e.g.
+     * {@code "1 year 2 months 5 days"} or {@code "1 ዓመት 2 ወር 5 ቀን"}.
+     *
+     * @param breakdown the breakdown to render
+     * @param units     units to include, in order; {@code null} for all three
+     * @param lang      {@code "english"} (default) or {@code "amharic"}
+     * @return the formatted string
+     */
+    public static String formatDistance(DiffBreakdown breakdown, Set<DiffUnit> units, String lang) {
+        Objects.requireNonNull(breakdown, "breakdown must not be null");
+        Set<DiffUnit> requested = (units == null) ? EnumSet.allOf(DiffUnit.class) : units;
+        boolean amharic = "amharic".equalsIgnoreCase(lang);
+
+        List<String> parts = new ArrayList<>(3);
+        if (requested.contains(DiffUnit.YEARS) && breakdown.years() != null) {
+            parts.add(breakdown.years() + " " + unitLabel(DiffUnit.YEARS, breakdown.years(), amharic));
+        }
+        if (requested.contains(DiffUnit.MONTHS) && breakdown.months() != null) {
+            parts.add(breakdown.months() + " " + unitLabel(DiffUnit.MONTHS, breakdown.months(), amharic));
+        }
+        if (requested.contains(DiffUnit.DAYS) && breakdown.days() != null) {
+            parts.add(breakdown.days() + " " + unitLabel(DiffUnit.DAYS, breakdown.days(), amharic));
+        }
+        if (!parts.isEmpty()) return String.join(" ", parts);
+
+        // Nothing was rendered — fall back to a zero of the smallest requested unit.
+        DiffUnit last = DiffUnit.DAYS;
+        for (DiffUnit u : DiffUnit.values()) {
+            if (requested.contains(u)) last = u;
+        }
+        return "0 " + unitLabel(last, 0, amharic);
+    }
+
+    /** Renders a breakdown in English, including years, months and days. */
+    public static String formatDistance(DiffBreakdown breakdown) {
+        return formatDistance(breakdown, null, "english");
+    }
+
+    private static String unitLabel(DiffUnit unit, int amount, boolean amharic) {
+        if (amharic) {
+            return switch (unit) {
+                case YEARS  -> "ዓመት";
+                case MONTHS -> "ወር";
+                case DAYS   -> "ቀን";
+            };
+        }
+        String singular = switch (unit) {
+            case YEARS  -> "year";
+            case MONTHS -> "month";
+            case DAYS   -> "day";
+        };
+        return amount == 1 ? singular : singular + "s";
+    }
+
+    /**
+     * Finds the holiday occurrence nearest to {@code ref} in the requested
+     * direction, looking at the previous, current, and next Ethiopian year.
+     * Mirrors {@code Kenat._getHolidayOccurrence} in {@code Kenat.ts}.
+     */
+    private static Kenat holidayOccurrence(String holidayKey, EthiopianDate ref, boolean future) {
+        List<Kenat> candidates = new ArrayList<>(3);
+        for (int year = ref.year() - 1; year <= ref.year() + 1; year++) {
+            Holiday h = Holidays.getHoliday(holidayKey, year);
+            if (h != null) candidates.add(new Kenat(h.ethiopian()));
+        }
+        if (candidates.isEmpty()) throw new UnknownHolidayException(holidayKey);
+
+        Comparator<Kenat> byDistance = Comparator.comparingInt(
+                k -> Math.abs(DayArithmetic.diffInDays(k.getEthiopian(), ref)));
+
+        return candidates.stream()
+                .filter(c -> future
+                        ? DayArithmetic.diffInDays(c.getEthiopian(), ref) >= 0
+                        : DayArithmetic.diffInDays(c.getEthiopian(), ref) <= 0)
+                .min(byDistance)
+                .orElseGet(() -> candidates.stream().min(byDistance).orElseThrow());
     }
 
     // -----------------------------------------------------------------------
