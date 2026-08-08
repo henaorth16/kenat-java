@@ -4,31 +4,31 @@ Guidance for Cursor agents (and other AI assistants) working on the Java port of
 
 ## What this is
 
-**Kenat** (Amharic: ቀናት) is an Ethiopian calendar library. The authoritative implementation lives in **`../kenat`** (TypeScript, npm package `kenat` v4.x). This repository (**`kenat_java`**) is an idiomatic **Java 21** rewrite—not a line-by-line translation.
+**Kenat** (Amharic: ቀናት) is an Ethiopian calendar library. The authoritative implementation lives in **`../kenat`** (TypeScript, npm package `kenat` v4.x). This repository (**`kenat-java`**) is an idiomatic **Java 21** rewrite—not a line-by-line translation.
 
 ## Hard rules
 
 | Rule | Detail |
 |------|--------|
 | **Never modify `../kenat`** | Read-only source of truth. No edits, no formatting, no test fixes. |
-| **All code goes in `kenat_java`** | Implementation, tests, docs, build config. |
+| **All code goes in `kenat-java`** | Implementation, tests, docs, build config. |
 | **Idiomatic Java** | Use records, sealed types, `java.time` where appropriate, clear packages—not TS patterns copied verbatim. |
 | **Java 21** | Toolchain target; prefer modern APIs (pattern matching, records, `Optional`, etc.). |
 | **SOLID** | Small focused types; pure functions for date math; thin façade for the main API. |
 | **API parity** | Keep public names and behavior close to the TS library unless Java offers a clearly better design (document deviations). |
-| **Update docs when done** | After each task, update this file and/or `docs/MIGRATION.md` (status, decisions, next steps). |
+| **Update docs when done** | After each task, update this file (status, decisions, next steps) and `README.md` if the public API changed. |
 
 ## Repository layout
 
 ```
 kenat/                  ← TypeScript source (DO NOT EDIT)
-kenat_java/
+kenat-java/
 ├── AGENTS.md           ← you are here
-├── docs/
-│   └── MIGRATION.md    ← module map, API map, progress checklist
+├── README.md           ← user-facing API reference + parity notes
 ├── lib/
 │   └── src/
 │       ├── main/java/io/github/henaorth16/kenat/   ← library
+│       ├── main/resources/kenat/nigs.json          ← Orthodox monthly commemorations
 │       └── test/java/io/github/henaorth16/kenat/   ← tests (mirror ../kenat/tests)
 ├── settings.gradle.kts
 └── gradle/
@@ -41,10 +41,10 @@ Gradle multi-project: single module `lib` (may split later if size warrants).
 ## Commands
 
 ```bash
-cd kenat_java
+cd kenat-java
 ./gradlew test          # run all JUnit 5 tests
 ./gradlew build         # compile + test + jars
-./gradlew javadoc       # API docs (when public API exists)
+./gradlew javadoc       # API docs
 ```
 
 Reference TS tests (read-only):
@@ -79,9 +79,9 @@ errors             → typed exceptions (KenatError hierarchy)
 
 See `../kenat/CLAUDE.md` for deeper TS architecture notes.
 
-## Java design choices (planned)
+## Java design choices
 
-Document here when implemented; justify any API difference.
+All implemented. Justify any further API difference here.
 
 ### 1. Date value types → Java records
 
@@ -114,7 +114,7 @@ Copy into `lib/src/main/resources/kenat/nigs.json` (read-only at runtime). Load 
 
 ### 6. No runtime dependencies
 
-Match TS “zero dependencies” goal. JUnit for tests; add AssertJ when porting real tests.
+Match TS “zero dependencies” goal. JUnit 5 only for tests — no AssertJ, no JSON library (`internal/Json.java` covers the one JSON resource).
 
 ### 7. Naming
 
@@ -139,18 +139,18 @@ Keep TS public names where reasonable: `toEC`, `toGC`, `getBahireHasab`, `MonthG
 | `HolidayTags`, `HolidayNames`, `FastingKeys`, `monthNames` | constants classes / enums |
 | `diffBreakdown` | `DayArithmetic.diffBreakdown()` |
 
-Types: see `docs/MIGRATION.md` for the full type mapping.
+Types: see the "Core Types" table in `README.md` for the full type mapping.
 
 ## Test strategy
 
-1. Port regression tests from `../kenat/tests/*.test.ts` to JUnit 5 + AssertJ.
+1. Port regression tests from `../kenat/tests/*.test.ts` to JUnit 5 (plain `Assertions`, no AssertJ).
 2. **Bahire Hasab / holiday tests are fixtures**—expected dates for specific Ethiopian years must match TS exactly.
 3. One Java test class per TS test file where possible (`ConversionsTest` ← `conversions.test.ts`).
 4. Do not modify TS tests to make Java pass—fix Java.
 
 ## Migration status
 
-**Phase: COMPLETE — all core modules implemented, all tests passing (92/92).**
+**Phase: COMPLETE — feature parity with `kenat` v4.x, 416 JUnit tests passing.**
 
 | Module | Status | Notes |
 |--------|--------|-------|
@@ -165,13 +165,34 @@ Types: see `docs/MIGRATION.md` for the full type mapping.
 | geezConverter | ✅ Done | `GeezConverter` |
 | formatting | ✅ Done | `Formatting` |
 | bahireHasab | ✅ Done | `BahireHasab` |
-| holidays | ✅ Done | `Holidays` (includes Islamic via arithmetic Hijri) |
+| holidays | ✅ Done | `Holidays` — Islamic dates via JDK `HijrahChronology` |
 | fasting | ✅ Done | `Fasting` |
 | Time | ✅ Done | `EthiopianTime` |
-| MonthGrid | ✅ Done | `MonthGrid` (saints/nigs overlay deferred) |
-| Kenat facade | ✅ Done | `Kenat` |
-| Tests ported | ☐ Pending | TypeScript fixtures not yet ported to JUnit |
-| nigs.json resource | ☐ Pending | Copy to `src/main/resources/kenat/nigs.json` |
+| MonthGrid | ✅ Done | Saints/nigs overlay, Jummah, `up()`/`down()` navigation |
+| render/printMonthCalendarGrid | ✅ Done | `MonthCalendarPrinter` |
+| Kenat facade | ✅ Done | Includes distance helpers, `startOfMonth`/`endOfMonth`, `isLeapYear`, `weekday` |
+| nigs.json resource | ✅ Done | `lib/src/main/resources/kenat/nigs.json` + `OrthodoxCommemorations` |
+| Tests ported | ✅ Done | One JUnit class per TS test file; see README project structure |
+
+### Documented deviations from `../kenat`
+
+These are intentional. Each is also noted in the Javadoc of the affected method and
+in the README's "Parity with the TypeScript library" section — keep all three in sync.
+
+1. **Islamic holiday dates** use the JDK's Umm al-Qura `HijrahChronology` rather than
+   ICU's astronomical `islamic` calendar (which is what `Intl.DateTimeFormat` gives the
+   TS library). Keeps the zero-dependency rule, is deterministic across JVMs, and matches
+   the observed civil dates. Eid al-Fitr can fall one day later than the TS result.
+2. **`getEthiopianNewYearForGregorian`** tests `gYear + 1` for leapness, not `gYear - 1`.
+   The TS version is unused internally so its off-by-one is invisible there; here it is
+   corrected so it agrees with `getGregorianDateOfEthiopianNewYear`.
+3. **Errors are exceptions**, not error objects with `toJSON()` — structured fields are
+   exposed as getters instead.
+
+### Zero-dependency JSON
+
+`nigs.json` is parsed by `internal/Json.java`, a ~200-line recursive-descent reader.
+Do not add Jackson/Gson — the no-runtime-dependency rule is a hard constraint.
 
 ## Suggested implementation order
 
@@ -191,17 +212,18 @@ Types: see `docs/MIGRATION.md` for the full type mapping.
 ## Publishing
 
 Group ID: `io.github.henaorth16`. Published `kenat:1.0.0` to Maven Central (2026-08-08).
+Current working version: `1.1.0` (TypeScript v4.x parity release, not yet published).
 
 **Setup complete:**
 - `lib/build.gradle.kts` uses Gradle built-in `maven-publish` + `signing` plugins (no third-party plugin required).
-- Artifact coordinates: `io.github.henaorth16:kenat:1.0.0`
+- Artifact coordinates: `io.github.henaorth16:kenat:<version>` (set in `lib/build.gradle.kts`)
 - Full POM metadata: name, description, URL, MIT license, developer, SCM.
 - Upload target: **OSSRH Staging API** (`ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/`) — the Central Portal does not accept Maven PUT directly; the staging API is Sonatype's compatibility service.
 - GPG signing reads the private key from `signing.keyFile` (`.asc` file) or `signing.key` (in-memory); passphrase in `signing.password`.
 
 **Credentials template:** see `gradle.properties` in the project root (all lines commented out — never committed with real values). Copy real values to `~/.gradle/gradle.properties`.
 
-**To publish a release:** see "Publishing to Maven Central (working procedure)" in `docs/MIGRATION.md`. Key steps:
+**To publish a release:** key steps ---
 1. `./gradlew :lib:publishMavenJavaPublicationToSonatypeCentralPortalRepository`
 2. `curl -X POST -H "Authorization: Bearer $TOKEN" "https://ossrh-staging-api.central.sonatype.com/manual/upload/defaultRepository/io.github.henaorth16?publishing_type=automatic"`
 3. Poll `https://central.sonatype.com/api/v1/publisher/status?id=<deploymentId>` until `PUBLISHED`.
@@ -212,8 +234,4 @@ Prerequisite: the GPG **public** key must be on a supported keyserver (`gpg --ke
 
 - `../kenat/CLAUDE.md` — TS agent guide (architecture, commands, invariants)
 - `../kenat/README.md` — user-facing API examples
-- `docs/MIGRATION.md` — detailed mapping and checklist
-- `docs/DEPENDENCY_GRAPH.md` — module imports, call hierarchy, init order
-- `docs/DEPENDENCY_ANALYSIS.md` — madge-verified cycles, fan-in/out, port order
-- `docs/EXECUTION_FLOW.md` — runtime flows, build/release pipeline
-- `docs/import-graph.dot` — Graphviz graph (render with `dot -Tsvg`)
+- `README.md` — Java API reference, core-type table, and the parity/deviation table
