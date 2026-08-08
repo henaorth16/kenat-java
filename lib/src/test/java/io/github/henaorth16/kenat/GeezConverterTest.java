@@ -119,7 +119,13 @@ class GeezConverterTest {
         void blankInputIsZero() {
             assertEquals(0, GeezConverter.toArabic(""));
             assertEquals(0, GeezConverter.toArabic("   "));
-            assertEquals(0, GeezConverter.toArabic(null));
+        }
+
+        @Test
+        void nullInputThrows() {
+            // geezConverter.ts throws for a non-string input but returns 0 for an
+            // empty string; the two cases stay distinct here.
+            assertThrows(GeezConverterException.class, () -> GeezConverter.toArabic(null));
         }
     }
 
