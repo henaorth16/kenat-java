@@ -46,4 +46,24 @@ public class InvalidInputTypeException extends KenatException {
 
     /** Description of the received type. */
     public String getReceivedType()  { return receivedType;  }
+
+    /**
+     * Builds an exception describing a rejected <em>value</em> rather than a
+     * rejected type — the common case in Java, where the compiler already
+     * guarantees the static type and only the range can be wrong.
+     *
+     * @param functionName  name of the function where the bad argument was detected
+     * @param parameterName name of the parameter
+     * @param expectedType  description of what was expected (e.g. {@code "number between 1 and 13"})
+     * @param receivedValue the offending value
+     * @return the exception, ready to throw
+     */
+    public static InvalidInputTypeException forValue(
+            String functionName,
+            String parameterName,
+            String expectedType,
+            Object receivedValue) {
+        return new InvalidInputTypeException(
+                functionName, parameterName, expectedType, String.valueOf(receivedValue));
+    }
 }

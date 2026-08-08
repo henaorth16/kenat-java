@@ -22,4 +22,15 @@ public class UnrecognizedInputException extends KenatException {
     public String getInputType() {
         return inputType;
     }
+
+    /**
+     * Builds an exception naming the runtime class of the offending argument.
+     *
+     * @param input the unrecognised argument (may be {@code null})
+     * @return the exception, ready to throw
+     */
+    public static UnrecognizedInputException forInput(Object input) {
+        return new UnrecognizedInputException(
+                input == null ? "null" : input.getClass().getName());
+    }
 }

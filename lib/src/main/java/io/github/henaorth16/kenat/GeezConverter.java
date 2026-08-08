@@ -100,12 +100,20 @@ public final class GeezConverter {
     /**
      * Converts a Ge'ez numeral string to its Arabic integer equivalent.
      *
+     * <p>Mirrors {@code toArabic} in {@code geezConverter.ts}, which separates
+     * the two empty-ish cases: a missing input is an error, whereas an empty or
+     * whitespace-only string converts to 0.
+     *
      * @param geezStr the Ge'ez numeral string
-     * @return Arabic integer value; 0 for blank/empty input
-     * @throws GeezConverterException if the string contains an unrecognised character
+     * @return Arabic integer value; 0 for an empty or whitespace-only string
+     * @throws GeezConverterException if {@code geezStr} is {@code null} or
+     *         contains an unrecognised character
      */
     public static int toArabic(String geezStr) {
-        if (geezStr == null || geezStr.isBlank()) return 0;
+        if (geezStr == null) {
+            throw new GeezConverterException("Input must be a non-empty string.");
+        }
+        if (geezStr.isBlank()) return 0;
 
         int total         = 0;
         int currentNumber = 0;

@@ -1,6 +1,12 @@
 package io.github.henaorth16.kenat;
 
+import io.github.henaorth16.kenat.exception.InvalidInputTypeException;
+
+import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.chrono.HijrahChronology;
+import java.time.chrono.HijrahDate;
+import java.time.temporal.ChronoField;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,14 +41,6 @@ public final class Holidays {
             Map.entry("labour",        new FixedEntry(8,  23, List.of(HolidayTags.PUBLIC, HolidayTags.STATE))),
             Map.entry("patriots",      new FixedEntry(8,  27, List.of(HolidayTags.PUBLIC, HolidayTags.STATE)))
     );
-
-    // -----------------------------------------------------------------------
-    // Islamic constants — Hijri epoch in Julian Day Number
-    // -----------------------------------------------------------------------
-
-    /** Julian Day Number of the Hijri epoch (1 Muharram 1 AH = 16 July 622 CE). */
-    private static final long HIJRI_EPOCH_JDN = 1948438L;
-    private static final int[] HIJRI_MONTH_DAYS = {30,29,30,29,30,29,30,29,30,29,30,29};
 
     // -----------------------------------------------------------------------
     // Public API
@@ -112,6 +110,10 @@ public final class Holidays {
      */
     public static List<Holiday> getHolidaysInMonth(int ethYear, int ethMonth,
                                                     String lang, List<String> filter) {
+        if (ethMonth < 1 || ethMonth > 13) {
+            throw InvalidInputTypeException.forValue(
+                    "getHolidaysInMonth", "ethMonth", "number between 1 and 13", ethMonth);
+        }
         List<Holiday> result = new ArrayList<>();
 
         // Fixed + movable Christian
@@ -197,66 +199,51 @@ public final class Holidays {
     // -----------------------------------------------------------------------
 
     /**
-     * Simple arithmetic Hijri calendar approximation.
-     * Converts a Hijri date to a Gregorian {@link LocalDate} using the
-     * Kuwaiti algorithm (same algorithm used by most browser Intl implementations).
+     * Converts a Hijri date to its Gregorian equivalent using the JDK's built-in
+     * {@link HijrahChronology} (the Umm al-Qura calendar).
+     *
+     * <p><strong>Deviation from the TypeScript library:</strong> {@code holidays.ts}
+     * derives Hijri dates from {@code Intl.DateTimeFormat} with the
+     * {@code islamic} calendar, which in ICU is the <em>astronomical</em> variant
+     * and can land one day earlier than Umm al-Qura (e.g. 1 Shawwal 1445 —
+     * Eid al-Fitr — is 9 April 2024 under ICU but 10 April 2024 under Umm al-Qura,
+     * which is the date actually observed). The JDK calendar is used here because
+     * it is the tabulated civil calendar, needs no external dependency, and is
+     * deterministic across JVMs.
      *
      * @param hYear  Hijri year
      * @param hMonth Hijri month (1–12)
      * @param hDay   Hijri day (1–30)
-     * @return Gregorian equivalent, or {@code null} if conversion fails
+     * @return Gregorian equivalent, or {@code null} if the date is not
+     *         representable (outside the supported 1300–1600 AH range)
      */
     static LocalDate hijriToGregorian(int hYear, int hMonth, int hDay) {
-        // Julian Day Number for the given Hijri date
-        long jdn = (long) Math.ceil(29.5001 * (hMonth - 1))
-                + (hYear - 1) * 354L
-                + (long) Math.floor((11L * hYear + 3L) / 30L)
-                + 1948440L - 385L + hDay - 1L;
-
-        // JDN → Gregorian
-        long z = jdn + 1;
-        long a = (long) Math.floor((z - 1867216.25) / 36524.25);
-        a = z + 1 + a - (long) Math.floor(a / 4.0);
-        long b = a + 1524;
-        long c = (long) Math.floor((b - 122.1) / 365.25);
-        long d = (long) Math.floor(365.25 * c);
-        long e = (long) Math.floor((b - d) / 30.6001);
-
-        int day   = (int) (b - d - (long) Math.floor(30.6001 * e));
-        int month = (int) (e < 14 ? e - 1 : e - 13);
-        int year  = (int) (month > 2 ? c - 4716 : c - 4715);
-
         try {
-            return LocalDate.of(year, month, day);
-        } catch (Exception ex) {
+            return LocalDate.from(HijrahChronology.INSTANCE.date(hYear, hMonth, hDay));
+        } catch (DateTimeException e) {
             return null;
         }
     }
 
     /**
-     * Returns the Hijri year and month/day from a Gregorian date.
-     * Needed to find the Hijri year that corresponds to an Ethiopian year.
+     * Returns the Hijri year, month, and day for a Gregorian date.
+     * Needed to find the Hijri year that overlaps a given Ethiopian year.
      *
      * @param date Gregorian date
-     * @return int[3]: {hYear, hMonth, hDay}
+     * @return {@code int[3]}: {@code {hYear, hMonth, hDay}}, or {@code null} if the
+     *         date is outside the supported Hijri range
      */
     static int[] gregorianToHijri(LocalDate date) {
-        long jdn = date.toEpochDay() + 2440588L; // LocalDate epoch → JDN
-        long l = jdn - 1948440L + 10632L;
-        long n = (long) Math.floor((l - 1.0) / 10631.0);
-        l = l - 10631L * n + 354L;
-        long j = (long) (Math.floor((10985.0 - l) / 5316.0)
-                * Math.floor(50.0 * l / 17719.0))
-                - (long) (Math.floor(l / 5670.0)
-                * Math.floor(43.0 * l / 15238.0));
-        l = l - (long) (Math.floor(30.0 - j) / 15.0)
-                * (long) Math.floor(17719.0 * j / 50.0)
-                + (long) (Math.floor(j / 16.0)
-                * Math.floor(15238.0 * j / 43.0)) - 30L;
-        long year  = 30L * n + (long) Math.floor(l / 365.25);
-        long month = (long) Math.floor(l / 29.5) + 1;
-        long day   = l - (long) Math.floor(29.5 * (month - 1));
-        return new int[]{(int) year, (int) month, (int) day};
+        try {
+            HijrahDate hd = HijrahDate.from(date);
+            return new int[]{
+                    hd.get(ChronoField.YEAR),
+                    hd.get(ChronoField.MONTH_OF_YEAR),
+                    hd.get(ChronoField.DAY_OF_MONTH)
+            };
+        } catch (DateTimeException e) {
+            return null;
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -277,8 +264,9 @@ public final class Holidays {
         List<IslamicOccurrence> result = new ArrayList<>();
 
         for (int gYear = ethStart.year(); gYear <= ethEnd.year(); gYear++) {
-            // Get approximate Hijri year for this Gregorian year
+            // Get the Hijri year in progress at the start of this Gregorian year
             int[] hNow = gregorianToHijri(LocalDate.of(gYear, 1, 1));
+            if (hNow == null) continue;
             for (int hYear = hNow[0] - 1; hYear <= hNow[0] + 1; hYear++) {
                 LocalDate greg = hijriToGregorian(hYear, hijriMonth, hijriDay);
                 if (greg == null || greg.getYear() != gYear) continue;
@@ -357,6 +345,7 @@ public final class Holidays {
 
         for (int gYear = ethStart.year(); gYear <= ethEnd.year(); gYear++) {
             int[] hNow = gregorianToHijri(LocalDate.of(gYear, 1, 1));
+            if (hNow == null) continue;
             for (int hYear = hNow[0] - 1; hYear <= hNow[0] + 1; hYear++) {
                 LocalDate startGrg = hijriToGregorian(hYear, hijriMonth, 1);
                 if (startGrg == null) continue;
