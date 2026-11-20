@@ -69,7 +69,7 @@ publishing {
             pom {
                 name        = "Kenat"
                 description = "Ethiopian calendar library — date conversion, holidays, fasting periods, Bahire Hasab, Geez numerals, and more."
-                url         = "https://github.com/henaorth16/kenat-java"
+                url         = "https://kenat.et"
                 inceptionYear = "2026"
 
                 licenses {

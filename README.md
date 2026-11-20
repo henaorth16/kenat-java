@@ -1,5 +1,7 @@
 # Kenat Java
 
+![Kenat / ቀናት — Ethiopian calendar library for Java](assets/img/kenat-java-banner.png)
+
 [![Java](https://img.shields.io/badge/Java-21-blue.svg)](https://openjdk.org/projects/jdk/21/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/build-Gradle-green.svg)](lib/build.gradle.kts)
@@ -308,13 +310,12 @@ small internal reader, so the library still ships with zero runtime dependencies
 
 ## Parity with the TypeScript library
 
-The Java port tracks `kenat` v4.x. Three behaviours deliberately differ, each for a
+The Java port tracks `kenat` v4.x. Two behaviours deliberately differ, each for a
 stated reason:
 
 | Area | TypeScript | Java | Why |
 |------|-----------|------|-----|
 | Islamic holiday dates | `Intl.DateTimeFormat` with ICU's astronomical `islamic` calendar | JDK `HijrahChronology` (Umm al-Qura) | No external dependency, deterministic across JVMs, and matches the observed civil dates. Eid al-Fitr can land one day later than the TS result (e.g. 2016 EC: Miazia 2 here, Miazia 1 there). |
-| `getEthiopianNewYearForGregorian` | Tests the *preceding* Gregorian year, returning the wrong day about half the time | Tests the *following* Gregorian year | The TS version is unused internally so the bug is not observable there; here it is corrected so it agrees with `getGregorianDateOfEthiopianNewYear`. |
 | Error types | Error objects with `toJSON()` | Unchecked exceptions rooted at `KenatException` | Idiomatic Java; structured fields are exposed as getters. |
 
 Everything else — conversions, Bahire Hasab, holidays, fasting, formatting, Ge'ez

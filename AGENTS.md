@@ -183,10 +183,7 @@ in the README's "Parity with the TypeScript library" section — keep all three 
    ICU's astronomical `islamic` calendar (which is what `Intl.DateTimeFormat` gives the
    TS library). Keeps the zero-dependency rule, is deterministic across JVMs, and matches
    the observed civil dates. Eid al-Fitr can fall one day later than the TS result.
-2. **`getEthiopianNewYearForGregorian`** tests `gYear + 1` for leapness, not `gYear - 1`.
-   The TS version is unused internally so its off-by-one is invisible there; here it is
-   corrected so it agrees with `getGregorianDateOfEthiopianNewYear`.
-3. **Errors are exceptions**, not error objects with `toJSON()` — structured fields are
+2. **Errors are exceptions**, not error objects with `toJSON()` — structured fields are
    exposed as getters instead.
 
 ### Zero-dependency JSON
