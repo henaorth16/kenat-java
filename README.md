@@ -308,13 +308,12 @@ small internal reader, so the library still ships with zero runtime dependencies
 
 ## Parity with the TypeScript library
 
-The Java port tracks `kenat` v4.x. Three behaviours deliberately differ, each for a
+The Java port tracks `kenat` v4.x. Two behaviours deliberately differ, each for a
 stated reason:
 
 | Area | TypeScript | Java | Why |
 |------|-----------|------|-----|
 | Islamic holiday dates | `Intl.DateTimeFormat` with ICU's astronomical `islamic` calendar | JDK `HijrahChronology` (Umm al-Qura) | No external dependency, deterministic across JVMs, and matches the observed civil dates. Eid al-Fitr can land one day later than the TS result (e.g. 2016 EC: Miazia 2 here, Miazia 1 there). |
-| `getEthiopianNewYearForGregorian` | Tests the *preceding* Gregorian year, returning the wrong day about half the time | Tests the *following* Gregorian year | The TS version is unused internally so the bug is not observable there; here it is corrected so it agrees with `getGregorianDateOfEthiopianNewYear`. |
 | Error types | Error objects with `toJSON()` | Unchecked exceptions rooted at `KenatException` | Idiomatic Java; structured fields are exposed as getters. |
 
 Everything else — conversions, Bahire Hasab, holidays, fasting, formatting, Ge'ez

@@ -111,15 +111,6 @@ public final class EthiopianCalendarUtils {
      * Ethiopian year {@code gYear - 7}; see
      * {@link #getGregorianDateOfEthiopianNewYear} for how the day is found.
      *
-     * <p><strong>Deviation from the TypeScript library:</strong>
-     * {@code getEthiopianNewYearForGregorian} in {@code utils.ts} tests the
-     * <em>preceding</em> Gregorian year ({@code gYear - 1}) instead of the
-     * following one, which returns the wrong day for roughly half of all years
-     * (e.g. it gives 11 September 2023 where the correct answer, and the one
-     * {@link #getGregorianDateOfEthiopianNewYear} produces, is 12 September).
-     * The function is unused inside the TypeScript library, so the bug is not
-     * observable there; here it is corrected so the two helpers agree.
-     *
      * @param gYear Gregorian year
      * @return {@code int[3]}: {@code [gregorianYear, month, day]}
      */
