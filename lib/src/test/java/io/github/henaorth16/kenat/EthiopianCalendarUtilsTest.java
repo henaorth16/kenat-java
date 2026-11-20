@@ -195,6 +195,28 @@ class EthiopianCalendarUtilsTest {
         }
 
         @Test
+        void newYearOutside1900To2099() {
+            // The Ethiopian leap cycle has no century exception, so 1900 and 2100
+            // (non-leap Gregorian years) shift Meskerem 1 by a day.
+            assertArrayEquals(new int[]{1895, 9, 11},
+                    EthiopianCalendarUtils.getGregorianDateOfEthiopianNewYear(1888));
+            assertArrayEquals(new int[]{1883, 9, 11},
+                    EthiopianCalendarUtils.getGregorianDateOfEthiopianNewYear(1876));
+            assertArrayEquals(new int[]{1899, 9, 11},
+                    EthiopianCalendarUtils.getGregorianDateOfEthiopianNewYear(1892));
+            assertArrayEquals(new int[]{1900, 9, 11},
+                    EthiopianCalendarUtils.getGregorianDateOfEthiopianNewYear(1893));
+            assertArrayEquals(new int[]{2100, 9, 12},
+                    EthiopianCalendarUtils.getGregorianDateOfEthiopianNewYear(2093));
+            assertArrayEquals(new int[]{1895, 9, 11},
+                    EthiopianCalendarUtils.getEthiopianNewYearForGregorian(1895));
+            assertArrayEquals(new int[]{1899, 9, 11},
+                    EthiopianCalendarUtils.getEthiopianNewYearForGregorian(1899));
+            assertArrayEquals(new int[]{2100, 9, 12},
+                    EthiopianCalendarUtils.getEthiopianNewYearForGregorian(2100));
+        }
+
+        @Test
         void theTwoNewYearHelpersAgree() {
             for (int ethYear = 1990; ethYear <= 2080; ethYear++) {
                 int[] fromEthiopian = EthiopianCalendarUtils.getGregorianDateOfEthiopianNewYear(ethYear);

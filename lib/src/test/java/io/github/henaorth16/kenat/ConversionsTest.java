@@ -95,6 +95,23 @@ class ConversionsTest {
         void toGCDateReturnsLocalDate() {
             assertEquals(LocalDate.of(2023, 9, 12), Conversions.toGCDate(2016, 1, 1));
         }
+
+        @Test
+        void battleOfAdwa() {
+            // Yekatit 23, 1888 = 1 March 1896 (1900 is not a Gregorian leap year)
+            assertEquals(new GregorianDate(1896, 3, 1), Conversions.toGC(1888, 6, 23));
+        }
+
+        @Test
+        void lastPagumeBefore2100AndFollowingNewYear() {
+            assertEquals(new GregorianDate(2099, 9, 11), Conversions.toGC(2091, 13, 6));
+            assertEquals(new GregorianDate(2099, 9, 12), Conversions.toGC(2092, 1, 1));
+        }
+
+        @Test
+        void newYearIn2100() {
+            assertEquals(new GregorianDate(2100, 9, 12), Conversions.toGC(2093, 1, 1));
+        }
     }
 
     @Nested
@@ -208,6 +225,16 @@ class ConversionsTest {
                     assertEquals(original, Conversions.toEC(Conversions.toGCDate(2016, month, day)),
                             "round trip failed for " + original);
                 }
+            }
+        }
+
+        @Test
+        void everyGregorianDayFrom1900To2100RoundTrips() {
+            LocalDate end = LocalDate.of(2100, 12, 31);
+            for (LocalDate d = LocalDate.of(1900, 1, 1); !d.isAfter(end); d = d.plusDays(1)) {
+                EthiopianDate ec = Conversions.toEC(d);
+                assertEquals(d, Conversions.toGCDate(ec.year(), ec.month(), ec.day()),
+                        "round trip failed for " + d + " (" + ec + ")");
             }
         }
     }
