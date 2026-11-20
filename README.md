@@ -1,5 +1,7 @@
 # Kenat Java
 
+![Kenat / ቀናት — Ethiopian calendar library for Java](assets/img/kenat-java-banner.png)
+
 [![Java](https://img.shields.io/badge/Java-21-blue.svg)](https://openjdk.org/projects/jdk/21/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build](https://img.shields.io/badge/build-Gradle-green.svg)](lib/build.gradle.kts)
