@@ -107,8 +107,9 @@ public final class EthiopianCalendarUtils {
      * Returns the Gregorian date of the Ethiopian New Year (Enkutatash) that
      * falls within the given Gregorian year.
      *
-     * <p>Enkutatash lands on 11 September, except in the year preceding a
-     * Gregorian leap year, when it lands on 12 September.
+     * <p>Enkutatash is always in September of {@code gYear} and starts
+     * Ethiopian year {@code gYear - 7}; see
+     * {@link #getGregorianDateOfEthiopianNewYear} for how the day is found.
      *
      * <p><strong>Deviation from the TypeScript library:</strong>
      * {@code getEthiopianNewYearForGregorian} in {@code utils.ts} tests the
@@ -123,21 +124,30 @@ public final class EthiopianCalendarUtils {
      * @return {@code int[3]}: {@code [gregorianYear, month, day]}
      */
     public static int[] getEthiopianNewYearForGregorian(int gYear) {
-        int newYearDay = isGregorianLeapYear(gYear + 1) ? 12 : 11;
-        return new int[]{gYear, 9, newYearDay};
+        return getGregorianDateOfEthiopianNewYear(gYear - 7);
     }
 
     /**
      * Returns the Gregorian date of the Ethiopian New Year (Enkutatash) for the
      * given Ethiopian year.
      *
+     * <p>Counted in days from Meskerem 1, 1964 (12 September 1971). Ethiopian
+     * leap years ({@code year % 4 == 3}) have no century exception, so the
+     * date drifts relative to the Gregorian calendar across 1900, 2100, etc.
+     *
      * @param ethiopianYear Ethiopian calendar year
      * @return {@code int[3]}: {@code [gregorianYear, month, day]}
      */
     public static int[] getGregorianDateOfEthiopianNewYear(int ethiopianYear) {
-        int gregorianYear = ethiopianYear + 7;
-        int newYearDay = isGregorianLeapYear(gregorianYear + 1) ? 12 : 11;
-        return new int[]{gregorianYear, 9, newYearDay};
+        LocalDate date = ethiopianNewYearDate(ethiopianYear);
+        return new int[]{date.getYear(), date.getMonthValue(), date.getDayOfMonth()};
+    }
+
+    /** Meskerem 1 of {@code ethiopianYear} as a {@link LocalDate}. */
+    static LocalDate ethiopianNewYearDate(int ethiopianYear) {
+        long days = 365L * (ethiopianYear - 1964)
+                + Math.floorDiv(ethiopianYear, 4) - Math.floorDiv(1964, 4);
+        return LocalDate.of(1971, 9, 12).plusDays(days);
     }
 
     // -----------------------------------------------------------------------

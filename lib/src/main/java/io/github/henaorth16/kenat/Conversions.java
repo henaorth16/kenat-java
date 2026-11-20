@@ -39,20 +39,9 @@ public final class Conversions {
             throw new InvalidEthiopianDateException(ethYear, ethMonth, ethDay);
         }
 
-        int[] newYear = getGregorianDateOfEthiopianNewYear(ethYear);
         int daysSinceNewYear = (ethMonth - 1) * 30 + ethDay - 1;
-        int newYearDOY = dayOfYear(newYear[0], newYear[1], newYear[2]);
-        int gregorianDOY = newYearDOY + daysSinceNewYear;
-        int gregorianYear = newYear[0];
-
-        int yearLength = isGregorianLeapYear(gregorianYear) ? 366 : 365;
-        if (gregorianDOY > yearLength) {
-            gregorianDOY -= yearLength;
-            gregorianYear += 1;
-        }
-
-        int[] md = monthDayFromDayOfYear(gregorianYear, gregorianDOY);
-        return new GregorianDate(gregorianYear, md[0], md[1]);
+        LocalDate date = ethiopianNewYearDate(ethYear).plusDays(daysSinceNewYear);
+        return new GregorianDate(date.getYear(), date.getMonthValue(), date.getDayOfMonth());
     }
 
     /**
